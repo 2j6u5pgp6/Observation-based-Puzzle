@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生活智慧邏輯挑戰</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f9f9f9;
+        }
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 { text-align: center; color: var(--accent-color); font-size: 28px; }
+        .day-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #ecf0f1;
+            transition: 0.3s;
+        }
+        button:hover { background-color: #bdc3c7; }
+        button.active { background-color: var(--accent-color); color: white; }
+        
+        .question-card {
+            margin-top: 20px;
+            padding: 20px;
+            border-left: 5px solid var(--accent-color);
+            background: #f0f7ff;
+            display: none;
+        }
+        .option-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin: 10px 0;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            font-size: 20px;
+        }
+        .option-btn:active { background: #e1e1e1; }
+        .feedback {
+            margin-top: 10px;
+            font-weight: bold;
+            display: none;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .correct { background: #d4edda; color: #155724; }
+        .wrong { background: #f8d7da; color: #721c24; }
+        .nav-btns { display: flex; justify-content: space-between; margin-top: 20px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧠 生活智慧挑戰</h1>
+    <p style="text-align:center; font-size: 18px;">請選擇今天的進度：</p>
+    <div class="day-selector" id="daySelector"></div>
+
+    <div id="quizArea" class="hidden">
+        <h2 id="dayTitle">第 1 組</h2>
+        <div id="questionContainer"></div>
+        <div class="nav-btns">
+            <button id="prevBtn" onclick="changeQuestion(-1)">上一題</button>
+            <span id="progressIndicator" style="font-size: 20px; align-self: center;">1 / 5</span>
+            <button id="nextBtn" onclick="changeQuestion(1)">下一題</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const allQuestions = [
+    // 第一組：大腦的「自動補全」
+    { q: "牆角露出一條搖擺的貓尾巴。為何你確定那裡有一隻貓？", a: ["牆壁是透明的", "大腦根據看到的一小部分，自動想好了整隻貓的樣子", "貓叫了"], c: 1, r: "這就是大腦的「自動補全」功能。" },
+    { q: "你看著杯子正面，如何斷定背面也是圓的？", a: ["繞過去看了", "心裡早就預期它是對稱的立體", "猜測的"], c: 1, r: "我們心裡對空間有一套完整的預期。" },
+    { q: "下層的書被擋住一大半，為何你覺得它是一本完整的書？", a: ["猜的", "你的邏輯會自動把看不見的部分連起來", "眼睛能透視"], c: 1, r: "大腦不喜歡斷掉的東西，會自動縫合。" },
+    { q: "櫃檯後的服務生只露出上半身，你為何不覺得他是飄在空中的？", a: ["他有穿衣服", "生活經驗讓我們自動認定他有下半身", "我看到了腳"], c: 1, r: "生活經驗構建了我們對世界的信任。" },
+    { q: "隧道遠方的小亮點，如何判斷那是出口而非牆上的白漆？", a: ["用手摸", "當你移動時，亮點會跟著變大，讓你感覺前面有路", "聽回音"], c: 1, r: "運動中的視覺變化能告訴我們空間深度。" },
+
+    // 第二組：動態與預期
+    { q: "車開進樹叢消失了，為何你會在另一端等待？", a: ["車壞了", "大腦記住了它的速度，並算出它該出現的時間", "樹是透明的"], c: 1, r: "我們對時間與速度有一套內在的計算。" },
+    { q: "透過極窄的門縫看房間，感覺房間很大，是因為：", a: ["眼睛變大", "局部畫面暗示了門後還有無限的空間", "門沒關好"], c: 1, r: "小小的視窗能帶動大大的想像。" },
+    { q: "平面照片裡，為何能看出樹的遠近？", a: ["樹有高度", "大腦透過東西重疊和大小，建立出前後的感覺", "照片是立體的"], c: 1, r: "視覺線索能讓平面變成立體。" },
+    { q: "招牌字被擋一半還能讀出來，是因為：", a: ["葉子會動", "習慣的形狀只要出現一小塊，心裡就知道全貌", "我背過地圖"], c: 1, r: "認字其實是認一個「整體形象」。" },
+    { q: "看到通往二樓的漆黑樓梯口，腳會不由自主想用力，是因為：", a: ["二樓有光", "身體看到環境，就先做好了預備動作", "腳痠了"], c: 1, r: "環境會自動邀請我們的身體做出反應。" },
+
+    // 第三組：感覺的真實與幻覺
+    { q: "抓癢發現抓錯地方卻覺得不癢了，代表「癢」是：", a: ["皮膚在癢", "大腦對身體感覺的一種認定", "指甲有力"], c: 1, r: "感覺有時候是心裡說了算。" },
+    { q: "電影是照片快速切換，你卻看到動態，是因為：", a: ["眼睛壞了", "大腦把前後兩張照片「黏」在一起了", "投影機太快"], c: 1, r: "大腦會自動填補靜止畫面間的空白。" },
+    { q: "房間無聲卻聽到耳鳴，這聲音對你來說：", a: ["是客觀存在的", "是心裡真切感受到的事實", "是幻覺，所以不存在"], c: 1, r: "只要感覺到了，就是一種真實。" },
+    { q: "手先泡冰水再泡溫水，覺得水好燙，證明了：", a: ["水溫不穩", "感覺是跟「剛才」的經驗比較出來的", "感溫器壞了"], c: 1, r: "感覺是相對的，不是絕對的。" },
+    { q: "夢裡被打覺得痛，這份痛感：", a: ["是真的受傷", "不需要身體被打，心裡也能產生痛的感覺", "根本不痛"], c: 1, r: "大腦可以模擬出所有的真實感。" },
+
+    // 第四組：感覺的餘溫與錯覺
+    { q: "脫掉戴很久的帽子還覺得頭重重的，是因為：", a: ["帽子還在", "剛才的感覺還留在腦袋裡沒散去", "腦袋腫了"], c: 1, r: "感覺會有一種「尾音」。" },
+    { q: "兩條一樣長的線，加上不同方向的箭頭看起來就不一樣長，應相信：", a: ["眼睛看到的", "實際拿尺量的結果", "相信箭頭"], c: 1, r: "直覺有時會欺騙我們，需要工具校正。" },
+    { q: "鏡子裡的桌子看起來在遠方，但鏡子表面就在眼前，這顯示：", a: ["桌子在鏡子後", "眼睛看到的空間跟尺量的空間是不一樣的", "鏡子是透明的"], c: 1, r: "視覺空間比物理空間更豐富。" },
+    { q: "戴VR眼鏡看到懸崖會腳軟，是因為：", a: ["地板在動", "眼睛看到的感覺大過了腦袋裡的理智", "電腦有輻射"], c: 1, r: "本能反應往往比理智快。" },
+    { q: "聞到老家的味道就想到家裡畫面，這畫面是：", a: ["眼睛看到的", "鼻子跟大腦記憶連在一起了", "別人說的"], c: 1, r: "感官之間是會互相喚醒的。" },
+
+    // 第五組：觀點的交織
+    { q: "兩個人並肩看彩虹，他們看到的：", a: ["是同一個彩虹", "其實是各人眼中反射出來的不同光線", "是假的"], c: 1, r: "彩虹是光與你相遇的結果，每個人都有專屬的彩虹。" },
+    { q: "小朋友覺得月亮跟著他，這邏輯是因為：", a: ["月亮會分身", "月亮太遠了，不管怎麼走，角度看起來都一樣", "月亮是活的"], c: 1, r: "距離產生的視覺不變性，常被誤認為移動。" },
+    { q: "一幅畫，有人說美，有人說醜。這美醜存在於：", a: ["畫布裡", "每個人看畫的心情與眼光中", "畫框上"], c: 1, r: "美是從人的眼中長出來的。" },
+    { q: "大家吃同一碗麵，美味程度無法比較是因為：", a: ["麵不夠", "每個人的舌頭感覺都是獨一無二的", "廚師偏心"], c: 1, r: "品味是極度私人的體驗。" },
+    { q: "小孩蒙眼覺得你看不到他，他的錯誤是：", a: ["他沒躲好", "以為「我看不見世界」等於「世界看不見我」", "手太短"], c: 1, r: "他還沒學會站在別人的角度看世界。" },
+
+    // 第六組：心理的溝通與共鳴
+    { q: "在螢幕看孫子，感覺他在身邊還是遠方？", a: ["螢幕裡", "心靈跨越了距離，覺得人就在眼前", "手機裡"], c: 1, r: "情感可以縮短空間的距離。" },
+    { q: "感覺有人在背後看你，是因為：", a: ["背後有眼睛", "心裡對周圍環境產生的一種警覺投射", "風在吹"], c: 1, r: "這種感覺往往來自內心的敏感。" },
+    { q: "夫妻對往事記憶不同，真實的往事是：", a: ["錄影機拍到的", "兩個人各自體會後的交集", "記憶力好的人說的"], c: 1, r: "記憶不是錄影，而是心靈的重建。" },
+    { q: "狗對空屋叫。邏輯上這說明了：", a: ["真的有鬼", "不同生命對世界的感覺範圍不一樣", "狗在玩"], c: 1, r: "生命各有各的感官界限。" },
+    { q: "我說蘋果你想到紅的，我想到綠的，我們溝通成功是因為：", a: ["心靈感應", "我們心裡都認同那個酸甜脆的概念", "顏色不重要"], c: 1, r: "語言捕捉的是事物的核心特徵。" },
+
+    // 第七組：心裡的時間滴答聲
+    { q: "焦慮時覺得紅燈超久，開心時覺得超快，說明：", a: ["時鐘壞了", "感覺到的時間跟鐘錶上的時間是兩回事", "陽光太強"], c: 1, r: "情緒是心靈的時鐘。" },
+    { q: "故事還沒完就知道結尾，是因為：", a: ["我聽過", "大腦會根據聽到的部分，一直往未來超前部署", "講太慢"], c: 1, r: "思考總是跑在事實的前面。" },
+    { q: "能跟著歌拍準節奏，是因為：", a: ["鼓手很準", "心裡已經抓到了那個動盪的規律", "運氣好"], c: 1, r: "我們會自動同步內在與外在的節律。" },
+    { q: "午睡醒來不知何時何地，是因為：", a: ["沒開燈", "心靈暫時跟現實的世界斷線了", "睡太久"], c: 1, r: "意識需要時間重新跟世界接軌。" },
+    { q: "看著秒數倒數會變緊張，是因為：", a: ["數字有魔力", "心裡預期那個時間到的瞬間快來了", "心臟不好"], c: 1, r: "我們在預測未來的壓力。" },
+
+    // 第八組：專注的流動
+    { q: "跌倒那一秒覺得時間像變慢了，是因為：", a: ["物理時間變了", "緊急時大腦拼命記錄細節，讓感覺變長了", "眼睛變慢"], c: 1, r: "大腦的訊息密度決定了時間感。" },
+    { q: "盯著「老」字看一分鐘，會突然覺得它不像個字，是因為：", a: ["老花了", "大腦把字的樣子跟它的意思切斷了", "字太醜"], c: 1, r: "太過專注於外形，意義就會暫時消失。" },
+    { q: "為什麼等電話時，房間的安靜特別有壓迫感？", a: ["耳朵變靈敏", "所有的注意力都放在什麼時候響這件事上", "沒訊號"], c: 1, r: "期待讓安靜變得不再純粹。" },
+    { q: "看到年輕的自己，覺得是「你」是因為：", a: ["長得像", "你感覺到那個人的精神跟你是一脈相承的", "別人說的"], c: 1, r: "自我感是跨越時間的連結。" },
+    { q: "下棋太專心，一小時像五分鐘，是因為：", a: ["棋盤太小", "全神貫注時，大腦自動忽略了時間的流逝", "沒看鐘"], c: 1, r: "當主體消失在行動中，時間也就消失了。" },
+
+    // 第九組：身體的延伸
+    { q: "盲人拿杖敲地感覺路面，感覺是在：", a: ["手掌心", "手杖的最尖端（手杖變成了身體的一部分）", "腳底"], c: 1, r: "工具可以成為感官的延伸。" },
+    { q: "穿過窄巷時，你的感覺在哪？", a: ["車輪下", "整台車的寬度，你覺得車身就是你的身體", "方向盤上"], c: 1, r: "開車時，車身就是你的大身體。" },
+    { q: "熟練打字或寫字時，你在：", a: ["想每個字怎麼寫", "手部自己知道路，像自動導航一樣", "看筆尖"], c: 1, r: "熟練後，動作會變成自動自發的流動。" },
+    { q: "裝很久的假牙，什麼時候會感覺到它？", a: ["平常都在感覺", "咬到硬物或鬆動時（它突然變成了外物）", "睡覺時"], c: 1, r: "順手時工具是透明的，壞掉時才有存在感。" },
+    { q: "夾菜時，你覺得那份「感覺」在哪？", a: ["手指頭", "筷子頭夾住菜的那一點", "碗裡面"], c: 1, r: "感覺會順著工具傳遞到末端。" },
+
+    // 第十組：主體與世界的邊界
+    { q: "用一支超級順手的筆寫字，筆在感覺中是：", a: ["消失的，好像手直接在紙上變出字", "沉重的", "有顏色的"], c: 0, r: "最好用的東西，往往最讓人感覺不到。" },
+    { q: "沒帶手機出門像沒穿衣服，說明手機：", a: ["太貴", "已經變成了你生活的「外接器官」", "很漂亮"], c: 1, r: "現代科技已經深入我們的生命感。" },
+    { q: "鋼琴家彈琴時是在：", a: ["操作按鈕", "透過指尖直接跟聲音融合在一起", "運動手指"], c: 1, r: "那是主體與聲音的直接對話。" },
+    { q: "穿了一整天衣服，何時才會感覺到它？", a: ["隨時都感覺到", "脫掉或不舒服時（身體跟它分開了）", "沒穿時"], c: 1, r: "平常我們是透過身體與世界融為一體。" },
+    { q: "掉在地上的頭髮，那一刻你覺得：", a: ["還是我的肉", "它已經從「我」變成了「外面的垃圾」", "很癢"], c: 1, r: "離開了生命中心，物體就失去了主觀意義。" }
+];
+
+let currentGroup = [];
+let currentIndex = 0;
+
+// 初始化分組按鈕
+const daySelector = document.getElementById('daySelector');
+for (let i = 1; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.innerText = `第${i}天`;
+    btn.onclick = () => loadGroup(i - 1);
+    daySelector.appendChild(btn);
+}
+
+function loadGroup(groupIndex) {
+    const start = groupIndex * 5;
+    currentGroup = allQuestions.slice(start, start + 5);
+    currentIndex = 0;
+    
+    document.querySelectorAll('.day-selector button').forEach((b, idx) => {
+        b.className = idx === groupIndex ? 'active' : '';
+    });
+    
+    document.getElementById('quizArea').classList.remove('hidden');
+    document.getElementById('dayTitle').innerText = `第 ${groupIndex + 1} 組挑戰`;
+    showQuestion();
+}
+
+function showQuestion() {
+    const qData = currentGroup[currentIndex];
+    const container = document.getElementById('questionContainer');
+    container.innerHTML = `
+        <div class="question-card" style="display:block;">
+            <p style="font-size:22px; font-weight:bold;">${qData.q}</p>
+            ${qData.a.map((opt, i) => `
+                <button class="option-btn" onclick="checkAnswer(${i}, ${qData.c}, '${qData.r}')">${opt}</button>
+            `).join('')}
+            <div id="feedback" class="feedback"></div>
+        </div>
+    `;
+    updateNav();
+}
+
+function checkAnswer(selected, correct, reason) {
+    const fb = document.getElementById('feedback');
+    fb.style.display = 'block';
+    if (selected === correct) {
+        fb.innerText = "⭐ 正確！ " + reason;
+        fb.className = "feedback correct";
+    } else {
+        fb.innerText = "💡 再想想看？提示：試著從「大腦的感覺」出發。";
+        fb.className = "feedback wrong";
+    }
+}
+
+function changeQuestion(step) {
+    currentIndex += step;
+    if (currentIndex < 0) currentIndex = 0;
+    if (currentIndex > 4) currentIndex = 4;
+    showQuestion();
+}
+
+function updateNav() {
+    document.getElementById('progressIndicator').innerText = `${currentIndex + 1} / 5`;
+    document.getElementById('prevBtn').disabled = currentIndex === 0;
+    document.getElementById('nextBtn').disabled = currentIndex === 4;
+}
+</script>
+
+</body>
+</html>
